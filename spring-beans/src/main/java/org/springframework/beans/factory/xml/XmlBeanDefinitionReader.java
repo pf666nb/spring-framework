@@ -126,7 +126,10 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	private ErrorHandler errorHandler = new SimpleSaxErrorHandler(logger);
 
 	private final XmlValidationModeDetector validationModeDetector = new XmlValidationModeDetector();
-
+	/**
+	 * 当前线程，正在加载的 EncodedResource 集合。
+	 这个类为每个线程都创建了一个本地变量，实际上是ThreadLocal为变量在每个线程中都创建了一个副本，使得每个线程都可以访问自己内部的副本变量
+	 */
 	private final ThreadLocal<Set<EncodedResource>> resourcesCurrentlyBeingLoaded =
 			new NamedThreadLocal<Set<EncodedResource>>("XML bean definition resources currently being loaded"){
 				@Override
@@ -322,19 +325,21 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 		if (logger.isTraceEnabled()) {
 			logger.trace("Loading XML bean definitions from " + encodedResource);
 		}
-
+		// <1> 获取已经加载过的资源
 		Set<EncodedResource> currentResources = this.resourcesCurrentlyBeingLoaded.get();
 
 		if (!currentResources.add(encodedResource)) {
+			// 将当前资源加入记录中。如果已存在，抛出异常
 			throw new BeanDefinitionStoreException(
 					"Detected cyclic loading of " + encodedResource + " - check your import definitions!");
 		}
-
+		// <2> 从 EncodedResource 获取封装的 Resource ，并从 Resource 中获取其中的 InputStream
 		try (InputStream inputStream = encodedResource.getResource().getInputStream()) {
 			InputSource inputSource = new InputSource(inputStream);
 			if (encodedResource.getEncoding() != null) {
 				inputSource.setEncoding(encodedResource.getEncoding());
 			}
+			// 核心逻辑部分，执行加载 BeanDefinition
 			return doLoadBeanDefinitions(inputSource, encodedResource.getResource());
 		}
 		catch (IOException ex) {
@@ -342,6 +347,7 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 					"IOException parsing XML document from " + encodedResource.getResource(), ex);
 		}
 		finally {
+			// 从缓存中剔除该资源 <3>
 			currentResources.remove(encodedResource);
 			if (currentResources.isEmpty()) {
 				this.resourcesCurrentlyBeingLoaded.remove();
@@ -387,7 +393,9 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 			throws BeanDefinitionStoreException {
 
 		try {
+			// <1> 获取 XML Document 实例
 			Document doc = doLoadDocument(inputSource, resource);
+			// <2> 根据 Document 实例，注册 Bean 信息
 			int count = registerBeanDefinitions(doc, resource);
 			if (logger.isDebugEnabled()) {
 				logger.debug("Loaded " + count + " bean definitions from " + resource);

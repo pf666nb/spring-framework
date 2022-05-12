@@ -80,17 +80,25 @@ public abstract class AbstractXmlApplicationContext extends AbstractRefreshableC
 	@Override
 	protected void loadBeanDefinitions(DefaultListableBeanFactory beanFactory) throws BeansException, IOException {
 		// Create a new XmlBeanDefinitionReader for the given BeanFactory.
+		//创建XmlBeanDefinitionReader 创建bean的读取器
+		//并通过回调设置到容器中，容器使用的该读取器来读取
 		XmlBeanDefinitionReader beanDefinitionReader = new XmlBeanDefinitionReader(beanFactory);
 
 		// Configure the bean definition reader with this context's
 		// resource loading environment.
+		// 为bean读取器设置spring资源加载器
+		//AbstractXmlApplicationContext 的祖先父类abstract_application_context继承了default_resource_loader
+		//因此此容器本身也是一个资源加载器
 		beanDefinitionReader.setEnvironment(this.getEnvironment());
 		beanDefinitionReader.setResourceLoader(this);
+		//为bean读取器设置saxxml解析器
 		beanDefinitionReader.setEntityResolver(new ResourceEntityResolver(this));
 
 		// Allow a subclass to provide custom initialization of the reader,
 		// then proceed with actually loading the bean definitions.
+		//当bean读取器读取bean定义的xml资源文件是，，启用xml的检验机制
 		initBeanDefinitionReader(beanDefinitionReader);
+		//bean读取器真正实现加载的方法
 		loadBeanDefinitions(beanDefinitionReader);
 	}
 
@@ -118,13 +126,19 @@ public abstract class AbstractXmlApplicationContext extends AbstractRefreshableC
 	 * @see #getResources
 	 * @see #getResourcePatternResolver
 	 */
+	//xml bean 读取器加载bean配置资源
 	protected void loadBeanDefinitions(XmlBeanDefinitionReader reader) throws BeansException, IOException {
+		//获取bean配置资源的定位
 		Resource[] configResources = getConfigResources();
 		if (configResources != null) {
+			//xml bean读取器调用父类AbstractBeanDefinitionReader的读取定位的bean配置资源
 			reader.loadBeanDefinitions(configResources);
 		}
+		//如果子类中获取的bean配置的资源定位为空
+		//则获取classpathxmlapplicationgcontext构造方法中setConfigLocations方法设置的资源
 		String[] configLocations = getConfigLocations();
 		if (configLocations != null) {
+			//xml bean读取器调用父类AbstractBeanDefinitionReader的读取定位的bean配置资源
 			reader.loadBeanDefinitions(configLocations);
 		}
 	}
